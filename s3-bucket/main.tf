@@ -1,34 +1,42 @@
 provider "aws" {
-  access_key = "test"
-  secret_key = "test"
-  region     = "sa-east-1"
-
-  endpoints {
-    s3 = "http://127.0.0.1:4566"
-  }
-
-  skip_credentials_validation = true
-  skip_requesting_account_id  = true
+  region  = "us-east-1"
+  profile = "default"
 }
 
-variable "bucket_names" {
+variable "bucket_name" {
+  type    = string
+  default = "dataton_challenge_bucket"
+}
+
+variable "folder_names" {
   type    = list(string)
   default = ["raw", "bronze", "silver", "gold", "logs"]
 }
 
-resource "aws_s3_bucket" "data_buckets" {
-  for_each = toset(var.bucket_names)
-
-  bucket = "eglobo-webmedia-${each.value}"  
+resource "aws_s3_bucket" "data_bucket" {
+  bucket = var.bucket_name
 
   tags = {
-    "Environment" = "Local"
+    "Environment" = "Production"
+  }
+}
+
+resource "aws_s3_bucket_object" "folders" {
+  for_each = toset(var.folder_names)
+
+  bucket = aws_s3_bucket.data_bucket.bucket
+  key    = "${each.value}/"  
+
+  tags = {
+    "Environment" = "Production"
     "DataStage"   = each.value
   }
 }
 
+output "bucket_name" {
+  value = aws_s3_bucket.data_bucket.bucket
+}
 
-
-output "bucket_names" {
-  value = [for bucket in aws_s3_bucket.data_buckets : bucket.bucket]
+output "folder_names" {
+  value = [for folder in aws_s3_bucket_object.folders : folder.key]
 }
